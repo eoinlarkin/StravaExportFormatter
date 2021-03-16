@@ -10,7 +10,7 @@ Activity files are generally *.xml* based, however depending on the format and g
 
 To complicate matters, the *.gpx* format is the best supported activity file format and the most useful for use with external tools. However, converting files individually to this format can be tedious for a large number of files. 
 
-An example of the added functionality is the following plot of individual activities which was generated using R and the `Strava` ([package](https://github.com/marcusvolz/strava))
+An example of the added functionality is the following plot of individual activities which was generated using R and the `Strava` [package](https://github.com/marcusvolz/strava)
 
 ![](/plots/facets_plot-1.png)
 
