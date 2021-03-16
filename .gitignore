@@ -6,6 +6,7 @@
 !*.py
 !*.rmd
 !*.md
+!*.png
 
 # Even if they are in subdirectories
 !*/
