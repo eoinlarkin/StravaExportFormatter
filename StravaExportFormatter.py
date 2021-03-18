@@ -42,8 +42,10 @@ def progressBar(iterable, prefix = '', suffix = '', decimals = 1, length = 100, 
     # Print New Line on Complete
     print()
 
+# ********************************************************************
 # Function to validate user input
 # An input message is passed to the function, output returned is either yes or no
+# ********************************************************************
 def request_YesNo(InputMsg):
     while True:
         print(InputMsg)
@@ -53,7 +55,9 @@ def request_YesNo(InputMsg):
         else:
             return usrOutput.lower() # coverting output to lower case
 
+# ********************************************************************
 # Function to call .exe files - used to execute GPSBabel
+# ********************************************************************
 def exec_cmd(command):
     result = subprocess.Popen(command, shell=True)
     text = result.communicate()[0]
