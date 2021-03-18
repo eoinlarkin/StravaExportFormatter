@@ -1,9 +1,6 @@
 #! python3
 
-# The following code will unzip all the files in the strava directory
-# and place in a new directory
-
-# First we need to unzip the source file
+# Importing required libraries
 import os
 import zipfile
 import re
@@ -45,6 +42,25 @@ def progressBar(iterable, prefix = '', suffix = '', decimals = 1, length = 100, 
     # Print New Line on Complete
     print()
 
+# Function to validate user input
+# An input message is passed to the function, output returned is either yes or no
+def request_YesNo(InputMsg):
+    while True:
+        print(InputMsg)
+        usrOutput = input()
+        while usrOutput.lower() not in ("yes", "no"):
+            usrOutput = input("Input not valid. Please enter either Yes or No:")
+        else:
+            return usrOutput.lower() # coverting output to lower case
+
+# Function to call .exe files - used to execute GPSBabel
+def exec_cmd(command):
+    result = subprocess.Popen(command, shell=True)
+    text = result.communicate()[0]
+    return_code = result.returncode
+    if return_code != 0:
+        return False
+    return True
 
 # ********************************************************************
 # Stage 01
@@ -98,25 +114,24 @@ for file in progressBar(filelist, prefix = 'Progress:', suffix = 'Complete', len
          os.remove(filepath)
  
 # Checking whether to delete the activities folder
-while True:
-    delFiles = input("Do you wish to delete the 'activities' folder? Enter Yes or No:")
-    while delFiles.lower() not in ("yes", "no"):
-       delFiles = input("Please enter either Yes or No:")
-    if delFiles == "Yes":
-        print("Deleting Activities folder")
-        shutil.rmtree("strava_download\\activities")
-        break
-    else:
-        break
+delDirectory = request_YesNo('\n' + '*' * 75 + '\n Would you like to delete the activites folder?')
+if delDirectory == "yes":
+    print("Deleting Activities folder")
+    shutil.rmtree("strava_download\\activities")
+
 
 # ********************************************************************
 # Stage 03
 # Reformatting the Tcx files
 # ********************************************************************
-      
+
 # Removing the whitespace from the tcx files:
+print('\n' + '*' * 75 + '\n Correcting the formatting for .tcx files')
+
+# Getting the list of files in hte folder
 filelist = os.listdir("strava_download\\activities_unzipped")
 
+# Removing the leading whitespace from tcx files
 for filename in progressBar(filelist, prefix = 'Progress:', suffix = 'Complete', length = 50):
     if filename.endswith('.tcx') == True:
         filepath = os.path.join("strava_download\\activities_unzipped", filename)
@@ -127,64 +142,53 @@ for filename in progressBar(filelist, prefix = 'Progress:', suffix = 'Complete',
         file.write(fixed)
         file.close()
 
-
 # ********************************************************************
 # Stage 04
 # Converting files to gpx format
 # ********************************************************************
 
-# Copying content to new folder for conversion to gpx
-shutil.copytree("strava_download\\activities_unzipped", "strava_download\\activities_gpx", symlinks=False, ignore=None)
+usrInput = request_YesNo('\n' + '*' * 75 + '\n Would you like to convert the activity files to .gpx format ? \n Enter Yes or No:')
+if usrInput == "yes":
+    print("\n Converting the files to gpx using GPSBabel")
 
-# Checking whether to delete the unzipped activities folder
-while True:
-    delFiles = input("Do you wish to delete the 'activities_unzipped' folder? Enter Yes or No:")
-    while delFiles.lower() not in ("yes", "no"):
-       delFiles = input("Please enter either Yes or No:")
-    if delFiles == "Yes":
-        print("Deleting Activities folder")
+    # Copying content to new folder for conversion to gpx
+    shutil.copytree("strava_download\\activities_unzipped", "strava_download\\activities_gpx", symlinks=False, ignore=None)
+
+    # Updating user on progress
+    print('\n' + '*' * 75 + "\n Converting the files to gpx using GPSBabel:")
+
+    # gpsbabel command, expecting to be in PATH. You may put the absolute path to the executable (mostly for Windows users)
+    gpsbabel_switch_tcx = "gpsbabel -t -i gtrnctr -f {filepath_tcx} -o gpx -F {filepath_gpx}"
+    gpsbabel_switch_fit = "gpsbabel -t -i garmin_fit -f {filepath_fit} -o gpx -F {filepath_gpx}"
+    filelist = os.listdir("strava_download\\activities_gpx")
+
+    fit_counter, tcx_counter, gpx_counter = 0, 0, 0
+    for filename in progressBar(filelist, prefix = 'Progress:', suffix = 'Complete', length = 50):
+
+        if filename.endswith('.gpx') == True: gpx_counter += 1
+
+        if filename.endswith('.tcx') == True:
+            filepath_tcx = os.path.join("strava_download\\activities_gpx", filename)
+            filepath_gpx = filepath_tcx.replace(".tcx", ".gpx")
+            rc = exec_cmd(gpsbabel_switch_tcx.format(filepath_gpx=filepath_gpx, filepath_tcx=filepath_tcx))
+            if rc: 
+                tcx_counter += 1
+                os.remove(filepath_tcx)
+        
+        if filename.endswith('.fit') == True:
+            filepath_fit = os.path.join("strava_download\\activities_gpx", filename)
+            filepath_gpx = filepath_fit.replace(".fit", ".gpx")
+            rc = exec_cmd(gpsbabel_switch_fit.format(filepath_gpx=filepath_gpx, filepath_fit=filepath_fit))
+            if rc: 
+                fit_counter += 1
+                os.remove(filepath_fit)
+
+    # Checking whether to delete the unzipped activities folder
+    # This contains the activity files in the original file formats
+    usrInput = request_YesNo('\n' + '*' * 75 + "\n Would you like to delete the 'activities_unzipped' folder? \n Enter Yes or No:")
+    if usrInput == "yes":
+        print("Deleting 'activites_unzipped' folder")
         shutil.rmtree("strava_download\\activities_unzipped")
-        break
-    else:
-        break
-
-# Updating user on progress
-print('\n' + '*' * 75 + "\n Converting the files to gpx using GPSBabel:")
-
-# Using gpsbabel to convert to gpx
-def exec_cmd(command):
-    result = subprocess.Popen(command, shell=True)
-    text = result.communicate()[0]
-    return_code = result.returncode
-    if return_code != 0:
-        return False
-    return True
-
-# gpsbabel command, expecting to be in PATH. You may put the absolute path to the executable (mostly for Windows users)
-gpsbabel_switch_tcx = "gpsbabel -t -i gtrnctr -f {filepath_tcx} -o gpx -F {filepath_gpx}"
-gpsbabel_switch_fit = "gpsbabel -t -i garmin_fit -f {filepath_fit} -o gpx -F {filepath_gpx}"
-filelist = os.listdir("strava_download\\activities_gpx")
-
-fit_counter, tcx_counter, gpx_counter = 0, 0, 0
-for filename in progressBar(filelist, prefix = 'Progress:', suffix = 'Complete', length = 50):
-
-    if filename.endswith('.gpx') == True: gpx_counter += 1
-
-    if filename.endswith('.tcx') == True:
-        filepath_tcx = os.path.join("strava_download\\activities_gpx", filename)
-        filepath_gpx = filepath_tcx.replace(".tcx", ".gpx")
-        rc = exec_cmd(gpsbabel_switch_tcx.format(filepath_gpx=filepath_gpx, filepath_tcx=filepath_tcx))
-        if rc: 
-            tcx_counter += 1
-            os.remove(filepath_tcx)
-    
-    if filename.endswith('.fit') == True:
-        filepath_fit = os.path.join("strava_download\\activities_gpx", filename)
-        filepath_gpx = filepath_fit.replace(".fit", ".gpx")
-        rc = exec_cmd(gpsbabel_switch_fit.format(filepath_gpx=filepath_gpx, filepath_fit=filepath_fit))
-        if rc: 
-            fit_counter += 1
-            os.remove(filepath_fit)
 
 # ********************************************************************
 # To Do 
